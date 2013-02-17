@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<head>
+  <meta charset="utf-8">
+  <style>
+  
+  </style>
+  <script src="/js/d3.js"></script>
+  <script src="/js/topojson.js"></script>
+  <script src="/js/jquery.js"></script>
+  <script src="/js/underscore.js"></script>
+  <script src="/js/backbone.js"></script>
+</head>
+
+<body>
+  <script>
+    var svg = d3.select('body').append('svg');
+
+    var w;
+    var pos = 50;
+
+    // longitude, latitude
+    var points = [
+      [ -83.133889, 42.680556], // Rochester, MI
+      [ -119.821944, 39.527222], // Reno, NV
+      [ -149.8925, 61.218056],   // Anchorage, AK
+      [ 115.216667, -8.65], //  Denpasar, Bali, Indonesia
+    ];
+
+    var projection = d3.geo.orthographic()
+      .scale(300)
+      .translate([300, 350])
+      .clipAngle(90)
+      .rotate([ pos, -10 ]);
+
+    var geopath = d3.geo.path()
+      .projection(projection);
+
+
+    function drawBackground() {
+      svg.append('path')
+      .datum({type: 'Sphere'})
+      .attr({
+        'class': 'background',
+        'd': geopath,
+        'fill': '#A4BAC7'
+      });
+    }
+    //drawBackground();
+
+    function drawGlobe(world) {
+      svg.selectAll('path')
+        .data(world.geometries)
+        .enter()
+        .append('path')
+        .attr({
+          d: geopath,
+          fill: '#617E2C',
+          stroke: '#000000'
+        });
+    }
+
+    function drawPoints(points) {
+      geoPoints = [];
+      $.each(points, function(i, v) {
+        var geoPoint = d3.geo.circle().angle([0.7]).origin(v)()
+        geoPoints.push(geoPoint);
+      });
+
+      svg.selectAll('path')
+      .data(geoPoints)
+      .enter()
+      .append('path')
+      .attr({
+        d: geopath,
+        'class': 'point',
+        fill: '#C93030',
+      });
+
+      var ps = $('.point');
+      $('svg').append(ps);
+
+    }
+
+
+
+    d3.json("/js/world.json", function(world) {
+      w = topojson.object(world, world.objects.world);
+      //drawGlobe(w);
+      setInterval(rotateGlobe, 16);
+    });
+
+    function rotateGlobe() {
+      svg.selectAll('path')
+        .remove()
+
+      pos = pos + 0.1;  
+      projection = projection.rotate([ pos, -10 ])
+      geopath = d3.geo.path()
+        .projection(projection)
+
+      drawPoints(points);
+      drawBackground();
+      drawGlobe(w);
+      drawPoints(points);
+
+    }
+
+    
+
+  </script>
+</body>
+</html>
