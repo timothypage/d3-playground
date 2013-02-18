@@ -12,19 +12,125 @@
 </head>
 
 <body>
+  <div id="globe"></div>
+
+  <div id="backbone">
+    <label for="name">Name</label>
+    <input type="text" id="name" >
+    <br />
+    <label for="latitude">Latitude</label>
+    <input type="text" id="latitude" >
+    <br />
+    <label for="longitude">Longitude</label>
+    <input type="text" id="longitude" >
+    <br />
+    <button id="add">Add Point</button>
+
+    <table id="points-table">
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Latitude</th>
+          <th>Longitude</th>
+          <th>&nbsp;</th> <!-- 'Remove' button -->
+        </tr>
+      </thead>
+      <tbody></tbody>
+    <table>
+  </div>
+
   <script>
-    var svg = d3.select('body').append('svg');
+
+    var points = new Backbone.Collection([
+      {
+        'name': "Rochester, MI", 
+        'latitude': 42.680556, 
+        'longitude': -83.133889
+      },
+      {
+        'name': "Reno, NV", 
+        'latitude': 39.527222, 
+        'longitude': -119.821944
+      },
+      {
+        'name': 
+        "Anchorage, AK", 
+        'latitude': 61.218056, 
+        'longitude': -149.8925
+      },
+    ]);
+
+    var PointsView = Backbone.View.extend({
+      tagName: 'tr',
+      events: {
+        'click .remove': 'removePoint',
+      },
+
+      removePoint: function() {
+        points.remove(this.model);
+      },
+
+      render: function() {
+        var point_table_template = '<td><%= name %></td><td><%= latitude %></td><td><%= longitude %></td><td class="remove">remove</td>';
+        this.$el.html(_.template(point_table_template, this.model.toJSON()));
+        return this;
+      }
+    });
+
+    var AppView = Backbone.View.extend({
+      el: '#backbone',
+
+      events: {
+        'click #add': 'addPoint',
+      },
+
+      initialize: function() {
+        points.bind('all', this.render, this);
+        this.render();
+      },
+
+      addPoint: function() {
+        var name = $('#name').val();
+        var latitude = $('#latitude').val();
+        var longitude = $('#longitude').val();
+
+        points.add({
+          'name': name,
+          'latitude': latitude,
+          'longitude': longitude
+        });
+      },
+
+      renderPoints: function(point) {
+        var points_view = new PointsView({ model: point });
+        this.$('#points-table').append(points_view.render().el);
+
+      },
+
+      render: function() {
+        this.$('#points-table tbody').empty();
+
+        points.each(this.renderPoints, this);
+
+      }
+    });
+
+    var app = new AppView();
+
+
+
+
+
+    /************* Draw Globe Stuff *************/
+
+    var svg = d3.select('#globe').append('svg')
+      .attr({
+        'width': 800,
+        'height': 700
+      });
 
     var w;
     var pos = 50;
-
-    // longitude, latitude
-    var points = [
-      [ -83.133889, 42.680556], // Rochester, MI
-      [ -119.821944, 39.527222], // Reno, NV
-      [ -149.8925, 61.218056],   // Anchorage, AK
-      [ 115.216667, -8.65], //  Denpasar, Bali, Indonesia
-    ];
 
     var projection = d3.geo.orthographic()
       .scale(300)
@@ -45,7 +151,6 @@
         'fill': '#A4BAC7'
       });
     }
-    //drawBackground();
 
     function drawGlobe(world) {
       svg.selectAll('path')
@@ -61,8 +166,11 @@
 
     function drawPoints(points) {
       geoPoints = [];
-      $.each(points, function(i, v) {
-        var geoPoint = d3.geo.circle().angle([0.7]).origin(v)()
+      points.each(function(point) {
+        var geoPoint = d3.geo.circle().angle([0.7]).origin([
+                point.get('longitude'), 
+                point.get('latitude')
+              ])();
         geoPoints.push(geoPoint);
       });
 
@@ -81,19 +189,15 @@
 
     }
 
-
-
-    d3.json("/js/world.json", function(world) {
-      w = topojson.object(world, world.objects.world);
-      //drawGlobe(w);
-      setInterval(rotateGlobe, 16);
-    });
-
     function rotateGlobe() {
       svg.selectAll('path')
         .remove()
 
-      pos = pos + 0.1;  
+      if (pos > 360 ) {
+        pos = 0;
+      }
+
+      pos = pos + 0.4;  
       projection = projection.rotate([ pos, -10 ])
       geopath = d3.geo.path()
         .projection(projection)
@@ -105,7 +209,11 @@
 
     }
 
-    
+    d3.json("/js/world.json", function(world) {
+      w = topojson.object(world, world.objects.world);
+      setInterval(rotateGlobe, 42);
+      // rotateGlobe();
+    });
 
   </script>
 </body>
