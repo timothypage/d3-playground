@@ -2,27 +2,50 @@
 <head>
   <meta charset="utf-8">
   <style>
-  
+    .remove { 
+      cursor: pointer; 
+    }
   </style>
   <script src="/js/d3.js"></script>
   <script src="/js/topojson.js"></script>
   <script src="/js/jquery.js"></script>
   <script src="/js/underscore.js"></script>
   <script src="/js/backbone.js"></script>
+  <script src="https://maps.googleapis.com/maps/api/js?key={googlemapskey}&sensor=false"></script>
 </head>
 
 <body>
   <div id="globe"></div>
 
   <div id="backbone">
-    <label for="name">Name</label>
-    <input type="text" id="name" >
-    <br />
-    <label for="latitude">Latitude</label>
-    <input type="text" id="latitude" >
-    <br />
-    <label for="longitude">Longitude</label>
-    <input type="text" id="longitude" >
+    <table>
+      <tbody>
+        <tr>
+          <td>
+            <label for="name">Name</label>
+          </td>
+          <td>
+            <input type="text" id="name" >
+          </td>
+        </tr>
+        <tr>
+          <td>
+            <label for="latitude">Latitude</label>
+          </td>
+          <td>
+            <input type="text" id="latitude" >
+          </td>
+        </tr>
+        <tr>
+          <td>
+            <label for="longitude">Longitude</label>
+          </td>
+          <td>
+            <input type="text" id="longitude" >
+          </td>
+        </tr>
+      </tbody>
+    </table>  
     <br />
     <button id="add">Add Point</button>
 
@@ -40,6 +63,8 @@
   </div>
 
   <script>
+
+    var geocoder = new google.maps.Geocoder()
 
     var points = new Backbone.Collection([
       {
@@ -94,11 +119,30 @@
         var latitude = $('#latitude').val();
         var longitude = $('#longitude').val();
 
-        points.add({
-          'name': name,
-          'latitude': latitude,
-          'longitude': longitude
-        });
+        if (latitude == "" || longitude == "") {
+          console.log('lookup');
+
+          geocoder.geocode( {'address': name}, function( results, status ){
+            if (status == google.maps.GeocoderStatus.OK) {
+              l = results[0].geometry.location;
+
+              points.add({
+                'name': name,
+                'latitude': l['lb'],
+                'longitude': l['mb']
+              });
+            }
+          });
+
+        } else {
+
+          points.add({
+            'name': name,
+            'latitude': latitude,
+            'longitude': longitude
+          });
+
+        }
       },
 
       renderPoints: function(point) {
